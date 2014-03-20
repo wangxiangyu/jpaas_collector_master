@@ -32,8 +32,8 @@ module CollectorMaster
             collector_ips.each do |ip|
                 collector_client=@collectors[ip]
                 data={}
-                collector_client.start=data["start"]=task_for_each_collector*count
-                collector_client.end=data["end"]=(task_for_each_collector*(count+1)-1)
+                collector_client.start_index=data["start_index"]=task_for_each_collector*count
+                collector_client.end_index=data["end_index"]=(task_for_each_collector*(count+1)-1)
                 count=count+1
                 nats.publish("collector_task_#{ip}",data)
             end
@@ -53,7 +53,7 @@ module CollectorMaster
             Time.now.to_i-time.to_i>5
         end
         def remove_dead_collector
-            EM.add_periodic_timer(10) do
+            EM::PeriodicTimer.new(10) do
                 @collectors.each do |ip,collector_client|
                     if timeout?(collector_client.update_time)
                         delete_collector(ip)
@@ -73,7 +73,7 @@ module CollectorMaster
         end
         
         def check_task_assign
-            EM.add_periodic_timer(10) do
+            EM::PeriodicTimer.new(10) do
                 all_assign=true
                 (0.255).each do |index|
                    all_assign=false if @tasks[index].to_i < Time.now.to_i-10
@@ -85,17 +85,19 @@ module CollectorMaster
         def register_task
             nats.subscribe("task_register") do |message|
                 index=message.data["index"]
-                @tasks[index]=Time.now.to_i
+                index.each do |i|
+                    @tasks[i]=Time.now.to_i
+                end
             end
         end
         class CollectorClient
             def initialize(ip)
                 @update_time=Time.now.to_i
-                @start=nil
-                @end=nil
+                @start_index=nil
+                @end_index=nil
                 @ip=ip
             end
-            attr_accessor :update_time, :start, :end, :ip 
+            attr_accessor :update_time, :start_index, :end_index, :ip 
         end
     end
 end
