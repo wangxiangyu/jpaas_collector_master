@@ -1,0 +1,5 @@
+logging:
+  file: /home/work/jpaas_collector_master/log/collector_master.log
+
+message_bus_uri: nats://jpaas_online:anBhYXNfb25saW5l@10.36.166.48:4242
+
