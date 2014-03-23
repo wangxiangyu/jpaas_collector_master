@@ -1,5 +1,6 @@
 require "config"
 require "nats"
+require "logger"
 
 module CollectorMaster
     class CollectorMaster
@@ -8,13 +9,17 @@ module CollectorMaster
             @nats=nil
             @collectors={}
             @tasks={}
+            @logger=Logger.new(config['logging']['file'])
         end
         attr_reader :config
         attr_reader :nats
+        attr_reader :logger
         def run
             init_task
             register_collector
             register_task
+            remove_dead_collector
+            check_task_assign
         end
         def setup_nats
             @nats = Nats.new(config['message_bus_uri'])
@@ -26,9 +31,10 @@ module CollectorMaster
         end
         def assign_task
             collector_num=@collectors.size
+            return if collector_num==0
             task_for_each_collector=512/collector_num+1
             count=0
-            collector_ips=@collector.keys.sort
+            collector_ips=@collectors.keys.sort
             collector_ips.each do |ip|
                 collector_client=@collectors[ip]
                 data={}
@@ -56,6 +62,7 @@ module CollectorMaster
             EM::PeriodicTimer.new(10) do
                 @collectors.each do |ip,collector_client|
                     if timeout?(collector_client.update_time)
+                        p "remove dead collector #{ip}"
                         delete_collector(ip)
                     end
                 end
@@ -64,7 +71,7 @@ module CollectorMaster
         def register_collector
             nats.subscribe("collector_register") do |message|
                 ip=message.data["ip"]
-                if @collectors.hash_key?(ip)
+                if !@collectors.has_key?(ip)
                     add_collector(ip)
                 else
                     update_collector(ip)
@@ -75,7 +82,7 @@ module CollectorMaster
         def check_task_assign
             EM::PeriodicTimer.new(10) do
                 all_assign=true
-                (0.255).each do |index|
+                (0..255).each do |index|
                    all_assign=false if @tasks[index].to_i < Time.now.to_i-10
                 end
                 assign_task unless all_assign           
