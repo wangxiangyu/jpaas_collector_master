@@ -10,19 +10,28 @@ module CollectorMaster
             @collectors={}
             @tasks={}
             @logger=Logger.new(config['logging']['file'])
+            @logger.datetime_format = "%Y-%m-%d %H:%M:%S"
+            @logger.formatter = proc do |severity, datetime, progname, msg|
+                "[#{datetime}] #{severity} : #{msg}\n"
+            end
+            @logger.level = Logger::DEBUG
         end
         attr_reader :config
         attr_reader :nats
         attr_reader :logger
         def run
+            begin
             init_task
             register_collector
             register_task
             remove_dead_collector
             check_task_assign
+            rescue => e
+                logger.error("Error in collect master: #{e.message} #{e.backtrace}")
+            end
         end
         def setup_nats
-            @nats = Nats.new(config['message_bus_uri'])
+            @nats = Nats.new(self,config['message_bus_uri'])
         end
         def init_task
             (0..255).each do |index|
@@ -53,7 +62,7 @@ module CollectorMaster
             assign_task
         end
         def update_collector(ip)
-            @collectors[ip].update_time=Time.now.to_i
+            @collectors[ip].update_time=Time.now.to_i if @collectors.has_key?(ip)
         end
         def timeout?(time)
             Time.now.to_i-time.to_i>5
@@ -62,7 +71,7 @@ module CollectorMaster
             EM::PeriodicTimer.new(10) do
                 @collectors.each do |ip,collector_client|
                     if timeout?(collector_client.update_time)
-                        p "remove dead collector #{ip}"
+                        logger.info("remove dead collector #{ip}")
                         delete_collector(ip)
                     end
                 end
@@ -85,7 +94,10 @@ module CollectorMaster
                 (0..255).each do |index|
                    all_assign=false if @tasks[index].to_i < Time.now.to_i-10
                 end
-                assign_task unless all_assign           
+                unless all_assign
+                    logger.info("task re assign")
+                    assign_task unless all_assign           
+                end
             end
         end
 

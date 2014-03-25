@@ -1,0 +1,39 @@
+GIT
+  remote: https://github.com/cloudfoundry/steno.git
+  revision: 3117002a92258fe4294bc34aaa8fd5005cf58e72
+  specs:
+    steno (1.2.4)
+      fluent-logger
+      yajl-ruby (~> 1.0)
+
+GEM
+  remote: https://rubygems.org/
+  specs:
+    daemons (1.1.9)
+    eventmachine (0.12.10)
+    fluent-logger (0.4.7)
+      msgpack (>= 0.4.4, < 0.6.0, != 0.5.3, != 0.5.2, != 0.5.1, != 0.5.0)
+      yajl-ruby (~> 1.0)
+    json_pure (1.8.1)
+    membrane (1.0.0)
+    msgpack (0.5.8)
+    nats (0.4.28)
+      daemons (>= 1.1.5)
+      eventmachine (= 0.12.10)
+      json_pure (>= 1.7.3)
+      thin (>= 1.4.1)
+    rack (1.5.2)
+    thin (1.5.1)
+      daemons (>= 1.0.9)
+      eventmachine (>= 0.12.6)
+      rack (>= 1.0.0)
+    yajl-ruby (1.2.0)
+
+PLATFORMS
+  ruby
+
+DEPENDENCIES
+  eventmachine
+  membrane
+  nats
+  steno!
