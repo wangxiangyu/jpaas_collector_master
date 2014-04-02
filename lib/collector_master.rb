@@ -9,7 +9,8 @@ module CollectorMaster
             @nats=nil
             @collectors={}
             @tasks={}
-            @logger=Logger.new(config['logging']['file'])
+            #@logger=Logger.new(config['logging']['file'])
+            @logger=Logger.new(STDOUT)
             @logger.datetime_format = "%Y-%m-%d %H:%M:%S"
             @logger.formatter = proc do |severity, datetime, progname, msg|
                 "[#{datetime}] #{severity} : #{msg}\n"
@@ -65,7 +66,7 @@ module CollectorMaster
             @collectors[ip].update_time=Time.now.to_i if @collectors.has_key?(ip)
         end
         def timeout?(time)
-            Time.now.to_i-time.to_i>5
+            Time.now.to_i-time.to_i>10
         end
         def remove_dead_collector
             EM::PeriodicTimer.new(10) do
@@ -92,7 +93,7 @@ module CollectorMaster
             EM::PeriodicTimer.new(10) do
                 all_assign=true
                 (0..255).each do |index|
-                   all_assign=false if @tasks[index].to_i < Time.now.to_i-10
+                   all_assign=false if @tasks[index].to_i < Time.now.to_i-15
                 end
                 unless all_assign
                     logger.info("task re assign")
